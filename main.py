@@ -68,6 +68,7 @@ class JarvisWindow(QMainWindow):
         self.input.setPlaceholderText("Try: show me your network | what have you learned | open Roblox")
         self.input.returnPressed.connect(self.run_command); command_row.addWidget(self.input,1)
         send=QPushButton("EXECUTE  ↗"); send.setObjectName("execute"); send.clicked.connect(self.run_command); command_row.addWidget(send)
+        access=QPushButton("VOICE ACCESS"); access.clicked.connect(self.prepare_voice_access); command_row.addWidget(access)
         stop=QPushButton("STOP"); stop.setObjectName("stop"); stop.clicked.connect(self.emergency_stop); command_row.addWidget(stop)
         outer.addLayout(command_row)
         self.setStyleSheet("""
@@ -121,6 +122,13 @@ class JarvisWindow(QMainWindow):
         except Exception as exc:
             self.log(f"SYSTEM ERROR: {exc}"); self.status.setText("● CHECK LOG")
         self.input.clear()
+
+    def prepare_voice_access(self):
+        """Prepare the command box for Windows Voice Access dictation."""
+        self.input.setFocus()
+        self.status.setText("● READY FOR WINDOWS VOICE ACCESS")
+        self.log("VOICE ACCESS: Dictate a command into the command box, then say 'press Enter'.")
+        self.speech.say("Command box ready. Dictate your command, then say press enter.")
 
     def emergency_stop(self):
         result=self.actions.release_all(); self.log("EMERGENCY STOP: "+result); self.status.setText("● INPUT RELEASED"); self.speech.say("Movement keys released.")
