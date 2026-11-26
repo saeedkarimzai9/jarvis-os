@@ -1,10 +1,8 @@
-"""Allowlisted Windows actions for the JARVIS starter build."""
+"""Safe, local Windows actions and information commands."""
 from __future__ import annotations
-
-import os
-import subprocess
-import webbrowser
+import os, platform, socket, subprocess, webbrowser
 from typing import Callable
+from core.memory import remember, summary
 
 try:
     import pyautogui
@@ -14,22 +12,14 @@ except Exception:
     pyautogui = None
 
 APP_COMMANDS = {
-    "notepad": ["notepad.exe"],
-    "calculator": ["calc.exe"],
-    "paint": ["mspaint.exe"],
-    "file explorer": ["explorer.exe"],
-    "explorer": ["explorer.exe"],
-    "task manager": ["taskmgr.exe"],
-    "settings": ["cmd", "/c", "start", "ms-settings:"],
-    "chrome": ["cmd", "/c", "start", "", "chrome"],
-    "roblox": ["cmd", "/c", "start", "", "roblox-player:"],
+    "notepad": ["notepad.exe"], "calculator": ["calc.exe"], "paint": ["mspaint.exe"],
+    "file explorer": ["explorer.exe"], "explorer": ["explorer.exe"],
+    "task manager": ["taskmgr.exe"], "settings": ["cmd", "/c", "start", "ms-settings:"],
+    "chrome": ["cmd", "/c", "start", "", "chrome"], "roblox": ["cmd", "/c", "start", "", "roblox-player:"],
 }
-KEYS = {"w": "w", "a": "a", "s": "s", "d": "d", "space": "space"}
+KEYS = {"w":"w", "a":"a", "s":"s", "d":"d", "space":"space"}
 
-
-class ActionError(Exception):
-    pass
-
+class ActionError(Exception): pass
 
 class DesktopActions:
     def __init__(self, log: Callable[[str], None] | None = None):
@@ -49,45 +39,48 @@ class DesktopActions:
 
     def hold_key(self, key: str) -> str:
         normalized = key.lower().strip()
-        if normalized not in KEYS:
-            raise ActionError("Only W, A, S, D and Space are enabled in this build.")
-        if pyautogui is None:
-            raise ActionError("Keyboard control needs pyautogui. Run setup.bat again.")
-        pyautogui.keyDown(KEYS[normalized])
-        self.held.add(KEYS[normalized])
+        if normalized not in KEYS: raise ActionError("Only W, A, S, D and Space are enabled.")
+        if pyautogui is None: raise ActionError("Keyboard control needs pyautogui. Run setup.bat again.")
+        pyautogui.keyDown(KEYS[normalized]); self.held.add(KEYS[normalized])
         return f"Holding {normalized.upper()}."
 
     def release_all(self) -> str:
         if pyautogui is not None:
-            try:
-                pyautogui.keyUp("w")
-                pyautogui.keyUp("a")
-                pyautogui.keyUp("s")
-                pyautogui.keyUp("d")
-                pyautogui.keyUp("space")
-            except Exception:
-                pass
+            for key in KEYS.values():
+                try: pyautogui.keyUp(key)
+                except Exception: pass
         self.held.clear()
         return "All movement keys released."
 
+    def network_report(self) -> str:
+        host = socket.gethostname()
+        try: local_ip = socket.gethostbyname(host)
+        except Exception: local_ip = "Unavailable"
+        try:
+            details = subprocess.check_output(["ipconfig"], text=True, errors="replace", timeout=5)
+            useful = [line.strip() for line in details.splitlines() if any(tag in line.lower() for tag in ("adapter", "ipv4", "default gateway", "dns servers"))]
+            details = "\n".join(useful[:18]) or "No adapter details found."
+        except Exception: details = "Could not read ipconfig."
+        return f"NETWORK STATUS\nDevice: {host}\nLocal IP: {local_ip}\n\n{details}\n\nPublic IP is not queried."
+
     def execute(self, command: str) -> str:
-        text = command.lower().strip().replace(".", "")
-        if not text:
-            return "I didn't catch a command."
-        if text in {"stop", "release", "release keys", "stop moving", "cancel movement"}:
-            return self.release_all()
-        if text in {"move forward", "forward", "hold w", "press w"}:
-            return self.hold_key("w")
-        if text in {"move backward", "backward", "back", "hold s", "press s"}:
-            return self.hold_key("s")
-        if text in {"move left", "left", "hold a", "press a"}:
-            return self.hold_key("a")
-        if text in {"move right", "right", "hold d", "press d"}:
-            return self.hold_key("d")
-        if text in {"jump", "hold space", "press space"}:
-            return self.hold_key("space")
-        if text.startswith("open "):
-            return self.open_app(text[5:].strip())
-        if text in {"help", "what can you do"}:
-            return "I can open allowlisted apps and hold or release W, A, S, D and Space. Try: open Roblox, move forward, jump, or stop."
-        raise ActionError("I don't know that command yet. Type 'help' to see supported commands.")
+        original = command.strip()
+        text = original.lower().strip().replace(".", "").replace("?", "")
+        for prefix in ("hey jarvis", "jarvis"):
+            if text.startswith(prefix): text = text[len(prefix):].strip(" ,")
+        if not text: return "I didn't catch a command."
+        if text in {"stop", "release", "release keys", "stop moving", "cancel movement"}: result = self.release_all()
+        elif text in {"move forward", "forward", "go forward", "hold w", "press w", "walk forward"}: result = self.hold_key("w")
+        elif text in {"move backward", "backward", "back", "go back", "hold s", "press s", "walk backward"}: result = self.hold_key("s")
+        elif text in {"move left", "left", "go left", "hold a", "press a"}: result = self.hold_key("a")
+        elif text in {"move right", "right", "go right", "hold d", "press d"}: result = self.hold_key("d")
+        elif text in {"jump", "hold space", "press space"}: result = self.hold_key("space")
+        elif text.startswith("open ") or text.startswith("launch "): result = self.open_app(text.split(" ", 1)[1].strip())
+        elif any(p in text for p in ("show me your network", "show network", "network status", "network information", "what is my ip")): result = self.network_report()
+        elif any(p in text for p in ("what have you learned", "what do you remember", "show memory", "show what you learned")): result = summary()
+        elif text in {"help", "what can you do", "commands"}:
+            result = "I can launch allowlisted apps, control W/A/S/D/Space, show network details, and report my local command history. Say 'go to sleep' to pause voice commands, or 'stop' to release movement keys."
+        elif text in {"go to sleep", "sleep", "stop listening"}: result = "Voice command received. Use the wake phrase to activate me again."
+        else: raise ActionError("I don't know that yet. Try 'show me your network', 'what have you learned', 'open Roblox', 'move forward', or 'help'.")
+        remember(original, result)
+        return result
