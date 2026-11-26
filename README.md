@@ -15,11 +15,20 @@ python -m venv .venv
 .venv\Scripts\python.exe main.py
 ```
 
-## Offline voice
-1. Download the small English Vosk model from https://alphacephei.com/vosk/models (vosk-model-small-en-us-0.15).
-2. Extract it to `models/vosk-model-small-en-us-0.15`.
-3. Click VOICE: OFF in JARVIS, then say "Jarvis, wake up".
-4. JARVIS then accepts repeated commands. Say "go to sleep" to return to wake-word mode.
+## Windows Voice Access (no speech-model download)
+1. In Windows 11, open **Settings → Accessibility → Speech** and turn on **Voice access**. Complete the first-time setup if Windows asks.
+2. Start JARVIS and click **VOICE ACCESS**. This focuses the command box.
+3. Use Voice Access to dictate a command, such as "open Roblox" or "show me your network".
+4. Say **"press Enter"** using Voice Access to submit the command to JARVIS.
+
+Windows Voice Access is a Windows feature, not a direct speech-recognition API exposed to JARVIS. This mode uses its normal dictation into the focused command field. The separate **VOICE: OFF** listener is the optional Vosk-based offline wake-word feature described below.
+
+### Optional Vosk wake-word listener
+1. Run `install_voice.bat` to install the optional speech packages.
+2. Download the small English Vosk model from https://alphacephei.com/vosk/models (vosk-model-small-en-us-0.15).
+3. Extract it to `models/vosk-model-small-en-us-0.15`.
+4. Click **VOICE: OFF** in JARVIS, then say "Jarvis, wake up".
+5. JARVIS then accepts repeated commands. Say "go to sleep" to return to wake-word mode.
 
 ## Text-to-speech
 JARVIS uses pyttsx3 with the Windows speech engine. It speaks command responses through a background queue so the interface remains responsive. If speech is silent, run:
